@@ -11,11 +11,10 @@ import csv
 
 #################
 # 2. batch process
-# 4. git upload
 #################
 
 # Allowed image extension
-IMG_EXT = ['.jpg', '.jpeg', '.png']
+IMG_EXT = ['.jpg', '.png', '.jpeg']
 
 # Total classes
 NUM_CLASSES = 1001
@@ -24,7 +23,7 @@ NUM_CLASSES = 1001
 parser = configargparse.ArgParser()
 parser.add('--image_dir', dest='image_dir', required=True)
 parser.add('--batch_size', dest='batch_size', default=4, type=int)
-parser.add('--save_csv', dest='csv_file', default='classification_results_frozen_batch.csv')
+parser.add('--save_csv', dest='csv_file', default='classification_results_batch.csv')
 parser.add('--frozen_model', dest='frozen_model', default='graph_data/frozen_inception_resnet_v2.pb')
 parser.add('--label_file', dest='label_file', default='translate/result_imagenet1001.json')
 
@@ -57,26 +56,48 @@ def img_preproc(img, central_fraction=0.875):
 	im = Image.open(img)
 	im = ImageOps.fit(im, (299, 299), method=2 ,bleed=one_side_fraction, centering=(0.5, 0.5))#method >> BILINEAR=2 , NEAREST=0 (default)
 	im = np.array(im).astype(dtype='float32')
-	im = im.reshape(-1,299,299,3)
+	im = im.reshape(299, 299, 3)
+        #im = im.reshape(-1,299,299,3)
 	im = 2*(im / 255.0) - 1.0
 	return im
 
-# Get Top5 infomations
+# Get Top5 with index infomations
 def get_top5_with_idx(prob):
-	prob_with_idx = zip(prob[0], range(NUM_CLASSES))
-	prob_with_idx.sort()
-	return prob_with_idx[NUM_CLASSES-5:]
+    top5_with_idx = []
+    for x in range(prob.shape[0]):
+        prob_with_idx = zip(prob[x], range(NUM_CLASSES))
+        prob_with_idx.sort()
+        top5_with_idx.append(prob_with_idx[NUM_CLASSES-5:])
+    return top5_with_idx
+
+# Evaluation
+def get_info(im_batch):
+    predict_values = sess.run(predictions, feed_dict={im_placeholder: im_batch})
+    return get_top5_with_idx(predict_values)
+
+# Get file name lists
+def get_file_list(dir_path):
+    img_list = []
+    non_img_list = []
+    for roots, _, files in os.walk(dir_path):
+        for file_name in files:
+            _, file_ext = splitext(file_name)
+            if file_ext.lower() in IMG_EXT:
+                img_list.append(roots + '/' + file_name)
+            else:
+                non_img_list.append(roots + '/' + file_name)
+    return img_list, non_img_list
 
 # Load frozen model
 def load_graph(frozen_graph_filename):
     with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
-    
+
 	with tf.Graph().as_default() as graph:
 		tf.import_graph_def(
             graph_def, 
-            input_map=None, 
+            input_map=None,
             return_elements=None, 
             name="prefix", 
             op_dict=None, 
@@ -84,48 +105,41 @@ def load_graph(frozen_graph_filename):
 		)
     return graph
 
-# Evaluation
-def get_info(images):
-#def get_info(image):
-	im_batch = []
-	for image in images:
-		im = im_batch.append(img_preproc(image))
-	predict_values = sess.run(predictions, feed_dict={im_placeholder: im_batch})
-	return get_top5_with_idx(predict_values)
-
-
 # Graph and session
 graph = load_graph(frozen_model)
 im_placeholder = graph.get_tensor_by_name('prefix/Placeholder:0')
 predictions = graph.get_tensor_by_name('prefix/InceptionResnetV2/Logits/Predictions:0')
 sess = tf.Session(graph=graph)
 
+# Lists of image / non-image
+images_list, non_images_list = get_file_list(image_dir)
+images_by_batch = [images_list[i:i+batch_size] for i in range(0, len(images_list), batch_size)]
 
+print '[CHECK]batch_size = ', batch_size
+print '[CHECK]image_batch_list', images_by_batch
 
-
-
-'''
-# Main loop
 print "--Main process start--"
-is_image = False
-for idx, (roots, _, files) in enumerate(os.walk(image_dir)):
-	if files == []:
-		pass
-	else:
-		for jdx, file_name in enumerate(files):
-			_, file_ext = splitext(file_name)
-			if file_ext.lower() in IMG_EXT:
-				is_image = True
-				file_name = roots + '/' + file_name
-				result_info = get_info(file_name)
-				for indx, j in enumerate(range(4, -1, -1)):
-					if indx == 0:
-						result_writer.writerow({'directory':roots+'/'+file_name, 'is_image':is_image, 'probability':result_info[j][0], 'index':result_info[j][1], 'kr_label':label[str(result_info[j][1])].values()[0].encode('utf-8')})
-					else:
-						result_writer.writerow({'probability':result_info[j][0], 'index':result_info[j][1], 'kr_label':label[str(result_info[j][1])].values()[0].encode('utf-8')})
-			else:
-				is_image = False
-				result_writer.writerow({'directory':roots+'/'+file_name, 'is_image':is_image})
+# Image result
+for batch in images_by_batch:
+    preproc_batch_tmp = []
+
+    for image in batch:
+        preproc_batch_tmp.append(img_preproc(image))
+    result_batch_info = get_info(preproc_batch_tmp)
+    print '[CHECK]batch_evaluation', result_batch_info
+    batch_len = len(batch)
+
+    for k in range(batch_len):
+        for j in range(4, -1, -1):
+            if j == 4:
+                result_writer.writerow({'directory':batch[k], 'is_image':'True', 'probability':result_batch_info[k][j][0], 'index':result_batch_info[k][j][1], 'kr_label':label[str(result_batch_info[k][j][1])].values()[0].encode('utf-8')})
+            else:
+                result_writer.writerow({'probability':result_batch_info[k][j][0], 'index':result_batch_info[k][j][1], 'kr_label':label[str(result_batch_info[k][j][1])].values()[0].encode('utf-8')})
+
+# Non-image result
+if len(non_images_list) != 0:
+    for non_image in non_images_list:
+        result_writer.writerow({'directory':non_image, 'is_image':'False'})
+
 
 print "--Process complete--"
-'''
