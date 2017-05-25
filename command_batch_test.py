@@ -3,18 +3,17 @@
 import tensorflow as tf
 from PIL import Image, ImageOps
 import numpy as np
-import json
+
 import configargparse
 import os
 from os.path import splitext
+
+import json
 import csv
 
-#################
-# 2. batch process
-#################
 
 # Allowed image extension
-IMG_EXT = ['.jpg', '.png', '.jpeg']
+IMG_EXT = ['.jpg', '.png', '.jpeg', 'bmp']
 
 # Total classes
 NUM_CLASSES = 1001
@@ -54,10 +53,11 @@ result_writer.writeheader()
 def img_preproc(img, central_fraction=0.875):
 	one_side_fraction = (1 - central_fraction) / 2.0
 	im = Image.open(img)
-	im = ImageOps.fit(im, (299, 299), method=2 ,bleed=one_side_fraction, centering=(0.5, 0.5))#method >> BILINEAR=2 , NEAREST=0 (default)
+        if im.mode != 'RGB':
+            im = im.convert('RGB')
+	im = ImageOps.fit(im, (299, 299), method=2 ,bleed=one_side_fraction, centering=(0.5, 0.5))
 	im = np.array(im).astype(dtype='float32')
 	im = im.reshape(299, 299, 3)
-        #im = im.reshape(-1,299,299,3)
 	im = 2*(im / 255.0) - 1.0
 	return im
 
@@ -96,11 +96,11 @@ def load_graph(frozen_graph_filename):
 
 	with tf.Graph().as_default() as graph:
 		tf.import_graph_def(
-            graph_def, 
+            graph_def,
             input_map=None,
-            return_elements=None, 
-            name="prefix", 
-            op_dict=None, 
+            return_elements=None,
+            name="prefix",
+            op_dict=None,
             producer_op_list=None
 		)
     return graph
@@ -115,8 +115,6 @@ sess = tf.Session(graph=graph)
 images_list, non_images_list = get_file_list(image_dir)
 images_by_batch = [images_list[i:i+batch_size] for i in range(0, len(images_list), batch_size)]
 
-print '[CHECK]batch_size = ', batch_size
-print '[CHECK]image_batch_list', images_by_batch
 
 print "--Main process start--"
 # Image result
@@ -126,7 +124,6 @@ for batch in images_by_batch:
     for image in batch:
         preproc_batch_tmp.append(img_preproc(image))
     result_batch_info = get_info(preproc_batch_tmp)
-    print '[CHECK]batch_evaluation', result_batch_info
     batch_len = len(batch)
 
     for k in range(batch_len):

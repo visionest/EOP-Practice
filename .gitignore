@@ -4,7 +4,11 @@
 *.pbtxt
 *.ckpt
 *.png
+*.bmp
 *.pyc
+*.swp
 
 backup/
 dir_img/
+tornado_web/
+
