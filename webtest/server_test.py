@@ -45,6 +45,6 @@ application = tornado.web.Application([
 
 
 if __name__ == "__main__":
-    cls = cls_test.CLS()
+    cls = cls_web_test.CLS()
     application.listen(8888)
     tornado.ioloop.IOLoop.instance().start()
