@@ -26,8 +26,9 @@ class FileHandler(tornado.web.RequestHandler):
         if self.get_arguments('urlarg'):
             self.u_name = self.get_arguments('urlarg')[0]
             http_client = tornado.httpclient.AsyncHTTPClient()
+            http_request = tornado.httpclient.HTTPRequest(url=self.u_name, request_timeout=50.0, connect_timeout=50.0)
             print 'Test : wait................'
-            http_client.fetch(self.u_name, self.handle_response)
+            http_client.fetch(http_request, self.handle_response)
             print 'Test : after fetch~~~~~~~~~~~~~~~~~~~'
 
         else:
