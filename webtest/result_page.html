@@ -4,23 +4,40 @@
 <head>
 <title>CLS Result page</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<style>
+table, th, td {
+	border: 1px solid black;
+}
+</style>
 </head>
 <br />
-<img src={{ file_name }} width="500" height="500"/>
+<img src={{ file_name }} width="640" height="480" />
 
 <div>
 {{ cls_results }}
 </div>
 
 
-{% for i in items %}
 <div>
-<span>{{ i[0] }}</span>
-<span>{{ i[1] }}</span>
-<span>{{ escape(i[2]) }}</span>
-<span>{{ escape(i[3]) }}</span>
-</div>
+<table>
+	<tr>
+		<th> Prob. </th>
+		<th> Class No. </th>
+		<th> Label-ENG </th>
+		<th> Label-KOR </th>
+	</tr>
+
+{% for i in items %}
+	<tr>
+		<td> {{ i[0] }} </td>
+		<td> {{ i[1] }} </td>
+		<td> {{ escape(i[2]) }} </td>
+		<td> {{ escape(i[3]) }} </td>
+	</tr>
+
 {% end %}
+</table>
+</div>
 
 <p><a href="http://192.168.176.144:8888">Back to main page</a></p>
 
