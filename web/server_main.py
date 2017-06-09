@@ -12,7 +12,7 @@ from io import BytesIO
 from PIL import Image
 
 sys.path.append('..')
-import cls_web_test
+import web_classification
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -63,6 +63,6 @@ application = tornado.web.Application([
 
 
 if __name__ == "__main__":
-    cls = cls_web_test.CLS()
+    cls = web_classification.CLS()
     application.listen(8888)
     tornado.ioloop.IOLoop.instance().start()
