@@ -1,7 +1,8 @@
 ## Requirement
 ---
 
-* NAVER Translate API client_id and client_secret
+* NAVER Machine Translate API client_id and client_secret
+* en label, synsets
 
 ---
 
