@@ -22,7 +22,7 @@ NUM_CLASSES = 1001
 parser = configargparse.ArgParser()
 parser.add('--image_dir', dest='image_dir', required=True)
 parser.add('--batch_size', dest='batch_size', default=4, type=int)
-parser.add('--save_csv', dest='csv_file', default='classification_results_batch.csv')
+parser.add('--save_csv', dest='csv_file', default='classification_results.csv')
 parser.add('--frozen_model', dest='frozen_model', default='graph_data/frozen_inception_resnet_v2.pb')
 parser.add('--label_file', dest='label_file', default='translate/result_imagenet1001.json')
 
