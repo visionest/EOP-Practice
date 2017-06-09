@@ -13,7 +13,7 @@ import csv
 
 
 # Allowed image extension
-IMG_EXT = ['.jpg', '.png', '.jpeg', 'bmp']
+IMG_EXT = ['.jpg', '.png', '.jpeg', '.bmp']
 
 # Total classes
 NUM_CLASSES = 1001
@@ -61,6 +61,14 @@ def img_preproc(img, central_fraction=0.875):
 	im = 2*(im / 255.0) - 1.0
 	return im
 
+# Determine image is broken
+def is_image(img_cond):
+    try:
+        Image.open(img_cond)
+        return True
+    except:
+        return False
+
 # Get Top5 with index infomations
 def get_top5_with_idx(prob):
     top5_with_idx = []
@@ -79,14 +87,19 @@ def get_info(im_batch):
 def get_file_list(dir_path):
     img_list = []
     non_img_list = []
+    broken_img_list = []
     for roots, _, files in os.walk(dir_path):
         for file_name in files:
-            _, file_ext = splitext(file_name)
-            if file_ext.lower() in IMG_EXT:
-                img_list.append(roots + '/' + file_name)
+            full_name = roots + '/' + file_name
+            if is_image(full_name) == True:
+                img_list.append(full_name)
             else:
-                non_img_list.append(roots + '/' + file_name)
-    return img_list, non_img_list
+                _, file_ext = splitext(file_name)
+                if file_ext.lower() in IMG_EXT:
+                    broken_img_list.append(full_name)
+                else:
+                    non_img_list.append(full_name)
+    return img_list, non_img_list, broken_img_list
 
 # Load frozen model
 def load_graph(frozen_graph_filename):
@@ -112,9 +125,8 @@ predictions = graph.get_tensor_by_name('prefix/InceptionResnetV2/Logits/Predicti
 sess = tf.Session(graph=graph)
 
 # Lists of image / non-image
-images_list, non_images_list = get_file_list(image_dir)
+images_list, non_images_list, broken_images_list = get_file_list(image_dir)
 images_by_batch = [images_list[i:i+batch_size] for i in range(0, len(images_list), batch_size)]
-
 
 print "--Main process start--"
 # Image result
@@ -129,14 +141,18 @@ for batch in images_by_batch:
     for k in range(batch_len):
         for j in range(4, -1, -1):
             if j == 4:
-                result_writer.writerow({'directory':batch[k], 'is_image':'True', 'probability':result_batch_info[k][j][0], 'index':result_batch_info[k][j][1], 'kr_label':label[str(result_batch_info[k][j][1])].values()[0].encode('utf-8')})
+                result_writer.writerow({'directory':batch[k], 'is_image':'Yes', 'probability':result_batch_info[k][j][0], 'index':result_batch_info[k][j][1], 'kr_label':label[str(result_batch_info[k][j][1])].values()[0].encode('utf-8')})
             else:
                 result_writer.writerow({'probability':result_batch_info[k][j][0], 'index':result_batch_info[k][j][1], 'kr_label':label[str(result_batch_info[k][j][1])].values()[0].encode('utf-8')})
 
 # Non-image result
 if len(non_images_list) != 0:
     for non_image in non_images_list:
-        result_writer.writerow({'directory':non_image, 'is_image':'False'})
+        result_writer.writerow({'directory':non_image, 'is_image':'No'})
 
+# Broken image result
+if len(broken_images_list) != 0:
+    for broken_image in broken_images_list:
+        result_writer.writerow({'directory':broken_image, 'is_image':'Broken'})
 
 print "--Process complete--"
