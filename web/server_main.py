@@ -27,7 +27,6 @@ class FileHandler(tornado.web.RequestHandler):
             self.u_name = self.get_arguments('urlarg')[0]
             http_client = tornado.httpclient.AsyncHTTPClient()
             http_request = tornado.httpclient.HTTPRequest(url=self.u_name, request_timeout=50.0, connect_timeout=50.0)
-            print 'url Test : fetch wait ......'
             http_client.fetch(http_request, self.handle_response)
             print 'url Test : fetch finish!!'
         else:
@@ -43,7 +42,6 @@ class FileHandler(tornado.web.RequestHandler):
         if response.error:
             print 'url error : %s' % response.error
         elif response.code == 200:
-            print 'url Test : response success!!!'
             img = Image.open(StringIO(response.body))
             top5_res = cls.get_info(img)
             self.render('result_page.html', file_name=self.u_name,
