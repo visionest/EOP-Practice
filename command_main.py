@@ -57,7 +57,6 @@ def img_preproc(img, central_fraction=0.875):
             im = im.convert('RGB')
 	im = ImageOps.fit(im, (299, 299), method=2 ,bleed=one_side_fraction, centering=(0.5, 0.5))
 	im = np.array(im).astype(dtype='float32')
-	im = im.reshape(299, 299, 3)
 	im = 2*(im / 255.0) - 1.0
 	return im
 
